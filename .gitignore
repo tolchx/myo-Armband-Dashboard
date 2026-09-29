@@ -1,0 +1,20 @@
+# Node.js dependencies (installed via npm install)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Large rehearsal audio recordings (multitracks)
+Ensayo Helix Multitrack/
+*.wav
+*.asd
+
+# Assembled raw 104MB installer (packaged as part1 and part2)
+drivers/Myo+Connect+Installer.exe
+
+# OS & Editor temporary files
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

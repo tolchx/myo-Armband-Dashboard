@@ -1,0 +1,31 @@
+{
+  "name": "myo-armband-dashboard",
+  "version": "1.0.0",
+  "description": "Real-time Telemetry, 8-Channel EMG, Harmonic Sound Synthesis, GLSL Shaders and OSC Bridge for Thalmic Myo Armband",
+  "main": "Myo/server.js",
+  "scripts": {
+    "start": "node Myo/server.js",
+    "webapp": "node Myo/server.js",
+    "osc": "node Myo/app.js"
+  },
+  "keywords": [
+    "myo",
+    "armband",
+    "emg",
+    "imu",
+    "osc",
+    "threejs",
+    "web-audio",
+    "glsl",
+    "shaders",
+    "music-performance",
+    "vj"
+  ],
+  "author": "tolch",
+  "license": "MIT",
+  "dependencies": {
+    "myo": "^2.1.2",
+    "osc-min": "^1.1.1",
+    "ws": "^1.1.5"
+  }
+}

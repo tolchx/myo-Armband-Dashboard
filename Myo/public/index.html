@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MYO Armband Dashboard, Audio Synth & GLSL Shaders</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Three.js: offline fallback to local file, or CDN -->
+  <script src="libs/three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- Top Navigation & Status Bar -->
+    <header class="top-nav">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 2a10 10 0 0 1 10 10"/>
+            <circle cx="12" cy="12" r="4"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>MYO ARMBAND <span class="badge-hud">PERFORMANCE SUITE</span></h1>
+          <span class="subtext">Control Sonoro, Shaders GLSL, Telemetría 8-CH EMG & Puente OSC</span>
+        </div>
+      </div>
+
+      <!-- Quick Status Badges -->
+      <div class="status-ribbon">
+        <!-- Connection Mode Toggle -->
+        <div class="mode-selector">
+          <label class="switch-label">Modo:</label>
+          <div class="toggle-group">
+            <button id="mode-server-btn" class="toggle-btn active" title="Usa el servidor Node.js + Puente OSC UDP">Server + OSC</button>
+            <button id="mode-direct-btn" class="toggle-btn" title="Conexión WebSocket directa desde el navegador a Myo Connect">Directo Web</button>
+          </div>
+        </div>
+
+        <div class="status-item" id="badge-ws">
+          <span class="dot dot-disconnected"></span>
+          <span class="label">WS:</span>
+          <span class="value" id="val-ws">Desconectado</span>
+        </div>
+
+        <div class="status-item" id="badge-device">
+          <span class="dot dot-disconnected"></span>
+          <span class="label">Pulsera:</span>
+          <span class="value" id="val-device">No vinculada</span>
+        </div>
+
+        <div class="status-item" id="badge-arm">
+          <span class="icon">💪</span>
+          <span class="value" id="val-arm">Sin sincronizar</span>
+        </div>
+
+        <div class="status-item" id="badge-battery">
+          <span class="icon">🔋</span>
+          <span class="value" id="val-battery">--%</span>
+        </div>
+
+        <div class="status-item" id="badge-rssi">
+          <span class="icon">📶</span>
+          <span class="value" id="val-rssi">-- dBm</span>
+        </div>
+
+        <div class="status-item" id="badge-lock">
+          <span class="icon" id="val-lock-icon">🔓</span>
+          <span class="value" id="val-lock">Desbloqueado</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="main-tabs-bar">
+      <button class="main-tab-btn active" data-tab="tab-telemetry">
+        <span class="tab-icon">📊</span>
+        <span>Telemetría & Puente OSC</span>
+      </button>
+      <button class="main-tab-btn" data-tab="tab-audio">
+        <span class="tab-icon">🎵</span>
+        <span>Control Sonoro & Armónicos</span>
+      </button>
+      <button class="main-tab-btn" data-tab="tab-shaders">
+        <span class="tab-icon">🌌</span>
+        <span>Shaders GLSL & Visuales 3D</span>
+      </button>
+    </nav>
+
+    <!-- ============================================================= -->
+    <!-- TAB 1: TELEMETRÍA, PULSERA 3D, EMG Y PUENTE OSC               -->
+    <!-- ============================================================= -->
+    <div class="tab-pane active" id="tab-telemetry">
+      <main class="dashboard-grid">
+
+        <!-- Column 1: 3D Visualization & IMU Orientation -->
+        <section class="card card-3d">
+          <div class="card-header">
+            <div class="header-left">
+              <span class="card-tag">IMU 3D</span>
+              <h2>Orientación y Modelo 3D</h2>
+            </div>
+            <div class="header-actions">
+              <button id="btn-zero-orientation" class="btn btn-secondary btn-sm" title="Calibrar orientación actual como centro">
+                🎯 Calibrar Centro (Tare)
+              </button>
+              <button id="btn-reset-cam" class="btn btn-dark btn-sm" title="Reiniciar cámara 3D">
+                🔄 Vista
+              </button>
+            </div>
+          </div>
+
+          <div class="viewport-3d-wrapper">
+            <div id="canvas-3d-container"></div>
+            <div class="viewport-overlay">
+              <div class="angle-metric">
+                <span class="metric-label">ROLL</span>
+                <span class="metric-val" id="val-roll">0.0°</span>
+              </div>
+              <div class="angle-metric">
+                <span class="metric-label">PITCH</span>
+                <span class="metric-val" id="val-pitch">0.0°</span>
+              </div>
+              <div class="angle-metric">
+                <span class="metric-label">YAW</span>
+                <span class="metric-val" id="val-yaw">0.0°</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Hardware Controls & Haptics -->
+          <div class="hardware-controls-bar">
+            <span class="control-label">Vibración Háptica:</span>
+            <div class="btn-group">
+              <button class="btn btn-haptic" data-vibe="short">⚡ Corta</button>
+              <button class="btn btn-haptic" data-vibe="medium">⚡⚡ Media</button>
+              <button class="btn btn-haptic" data-vibe="long">⚡⚡⚡ Larga</button>
+            </div>
+            <div class="btn-group ml-auto">
+              <button id="btn-toggle-lock" class="btn btn-outline btn-sm">🔒 Alternar Bloqueo</button>
+              <button id="btn-toggle-emg" class="btn btn-outline btn-sm active-state">⚡ Stream EMG: ON</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Column 2: Gestures HUD & Motion Telemetry -->
+        <section class="card card-gestures">
+          <div class="card-header">
+            <span class="card-tag">IA GESTOS</span>
+            <h2>Reconocimiento de Gestos</h2>
+          </div>
+
+          <div class="poses-grid">
+            <div class="pose-card" id="pose-rest" data-pose="rest">
+              <div class="pose-icon">✋</div>
+              <div class="pose-info">
+                <span class="pose-name">Rest</span>
+                <span class="pose-desc">Reposo</span>
+              </div>
+            </div>
+
+            <div class="pose-card" id="pose-fist" data-pose="fist">
+              <div class="pose-icon">✊</div>
+              <div class="pose-info">
+                <span class="pose-name">Fist</span>
+                <span class="pose-desc">Puño cerrado</span>
+              </div>
+            </div>
+
+            <div class="pose-card" id="pose-wave_in" data-pose="wave_in">
+              <div class="pose-icon">👈</div>
+              <div class="pose-info">
+                <span class="pose-name">Wave In</span>
+                <span class="pose-desc">Onda hacia adentro</span>
+              </div>
+            </div>
+
+            <div class="pose-card" id="pose-wave_out" data-pose="wave_out">
+              <div class="pose-icon">👉</div>
+              <div class="pose-info">
+                <span class="pose-name">Wave Out</span>
+                <span class="pose-desc">Onda hacia afuera</span>
+              </div>
+            </div>
+
+            <div class="pose-card" id="pose-fingers_spread" data-pose="fingers_spread">
+              <div class="pose-icon">🖐️</div>
+              <div class="pose-info">
+                <span class="pose-name">Fingers Spread</span>
+                <span class="pose-desc">Dedos abiertos</span>
+              </div>
+            </div>
+
+            <div class="pose-card" id="pose-double_tap" data-pose="double_tap">
+              <div class="pose-icon">✌️</div>
+              <div class="pose-info">
+                <span class="pose-name">Double Tap</span>
+                <span class="pose-desc">Doble toque dedos</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Motion Sensors & Impact Alert -->
+          <div class="motion-summary">
+            <div class="motion-block">
+              <div class="motion-label">Acelerómetro (g)</div>
+              <div class="axis-readouts">
+                <span>X: <strong id="acc-x">0.00</strong></span>
+                <span>Y: <strong id="acc-y">0.00</strong></span>
+                <span>Z: <strong id="acc-z">0.00</strong></span>
+              </div>
+            </div>
+
+            <div class="motion-block">
+              <div class="motion-label">Giroscopio (°/s)</div>
+              <div class="axis-readouts">
+                <span>X: <strong id="gyro-x">0.0</strong></span>
+                <span>Y: <strong id="gyro-y">0.0</strong></span>
+                <span>Z: <strong id="gyro-z">0.0</strong></span>
+              </div>
+            </div>
+
+            <div class="hit-indicator" id="hit-box">
+              <span class="hit-text">IMPACTO / HIT</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Row 2: 8-Channel EMG Live Oscilloscope -->
+        <section class="card card-emg">
+          <div class="card-header">
+            <div class="header-left">
+              <span class="card-tag">EMG (200 Hz)</span>
+              <h2>Señales Electromiográficas (8 Canales)</h2>
+            </div>
+            <div class="emg-controls">
+              <label class="control-slider">
+                <span>Ganancia / Zoom:</span>
+                <input type="range" id="slider-emg-gain" min="1" max="5" step="0.5" value="2">
+                <span id="val-emg-gain">2.0x</span>
+              </label>
+              <button id="btn-freeze-emg" class="btn btn-secondary btn-sm">⏸️ Pausar Graficado</button>
+            </div>
+          </div>
+
+          <div class="emg-main-layout">
+            <!-- 8 Oscilloscope Canvases -->
+            <div class="emg-channels-container" id="emg-channels-grid">
+              <div class="emg-ch-row" data-ch="0">
+                <span class="ch-badge">CH 1</span>
+                <div class="ch-canvas-wrap"><canvas id="canvas-emg-0" height="42"></canvas></div>
+                <div class="ch-bar-wrap"><div class="ch-bar" id="bar-emg-0"></div></div>
+                <span class="ch-val" id="val-emg-0">0</span>
+              </div>
+              <div class="emg-ch-row" data-ch="1">
+                <span class="ch-badge">CH 2</span>
+                <div class="ch-canvas-wrap"><canvas id="canvas-emg-1" height="42"></canvas></div>
+                <div class="ch-bar-wrap"><div class="ch-bar" id="bar-emg-1"></div></div>
+                <span class="ch-val" id="val-emg-1">0</span>
+              </div>
+              <div class="emg-ch-row" data-ch="2">
+                <span class="ch-badge">CH 3</span>
+                <div class="ch-canvas-wrap"><canvas id="canvas-emg-2" height="42"></canvas></div>
+                <div class="ch-bar-wrap"><div class="ch-bar" id="bar-emg-2"></div></div>
+                <span class="ch-val" id="val-emg-2">0</span>
+              </div>
+              <div class="emg-ch-row" data-ch="3">
+                <span class="ch-badge">CH 4</span>
+                <div class="ch-canvas-wrap"><canvas id="canvas-emg-3" height="42"></canvas></div>
+                <div class="ch-bar-wrap"><div class="ch-bar" id="bar-emg-3"></div></div>
+                <span class="ch-val" id="val-emg-3">0</span>
+              </div>
+              <div class="emg-ch-row" data-ch="4">
+                <span class="ch-badge">CH 5</span>
+                <div class="ch-canvas-wrap"><canvas id="canvas-emg-4" height="42"></canvas></div>
+                <div class="ch-bar-wrap"><div class="ch-bar" id="bar-emg-4"></div></div>
+                <span class="ch-val" id="val-emg-4">0</span>
+              </div>
+              <div class="emg-ch-row" data-ch="5">
+                <span class="ch-badge">CH 6</span>
+                <div class="ch-canvas-wrap"><canvas id="canvas-emg-5" height="42"></canvas></div>
+                <div class="ch-bar-wrap"><div class="ch-bar" id="bar-emg-5"></div></div>
+                <span class="ch-val" id="val-emg-5">0</span>
+              </div>
+              <div class="emg-ch-row" data-ch="6">
+                <span class="ch-badge">CH 7</span>
+                <div class="ch-canvas-wrap"><canvas id="canvas-emg-6" height="42"></canvas></div>
+                <div class="ch-bar-wrap"><div class="ch-bar" id="bar-emg-6"></div></div>
+                <span class="ch-val" id="val-emg-6">0</span>
+              </div>
+              <div class="emg-ch-row" data-ch="7">
+                <span class="ch-badge">CH 8</span>
+                <div class="ch-canvas-wrap"><canvas id="canvas-emg-7" height="42"></canvas></div>
+                <div class="ch-bar-wrap"><div class="ch-bar" id="bar-emg-7"></div></div>
+                <span class="ch-val" id="val-emg-7">0</span>
+              </div>
+            </div>
+
+            <!-- Radial Muscle Ring / Heatmap -->
+            <div class="emg-radial-panel">
+              <span class="radial-title">Activación Muscular Radial</span>
+              <div class="radial-canvas-wrap">
+                <canvas id="canvas-radial-heatmap" width="180" height="180"></canvas>
+              </div>
+              <div class="radial-legend">
+                <span>8 Sensores de la Pulsera</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Row 3: OSC Routing Bridge & Live Network Inspector -->
+        <section class="card card-osc">
+          <div class="card-header">
+            <div class="header-left">
+              <span class="card-tag">OSC UDP</span>
+              <h2>Puente Open Sound Control (OSC)</h2>
+            </div>
+            <div class="osc-actions">
+              <button id="btn-test-osc" class="btn btn-secondary btn-sm">📡 Enviar OSC de Prueba</button>
+              <button id="btn-clear-log" class="btn btn-dark btn-sm">Limpiar Registro</button>
+            </div>
+          </div>
+
+          <div class="osc-layout">
+            <!-- OSC Configuration Form -->
+            <div class="osc-config-panel">
+              <div class="form-row">
+                <label>Host Destino:</label>
+                <input type="text" id="osc-target-host" value="127.0.0.1">
+              </div>
+              <div class="form-row">
+                <label>Puerto OSC Salida:</label>
+                <input type="number" id="osc-target-port" value="22345">
+              </div>
+              <div class="form-row">
+                <label>Puerto OSC Entrada:</label>
+                <input type="number" id="osc-listen-port" value="22346">
+              </div>
+              <div class="form-row">
+                <label>Prefijo Dirección:</label>
+                <input type="text" id="osc-prefix" value="/myo/0">
+              </div>
+
+              <div class="osc-toggles-title">Flujos OSC Activos:</div>
+              <div class="osc-toggles-grid">
+                <label class="toggle-checkbox">
+                  <input type="checkbox" id="osc-toggle-emg" checked>
+                  <span>EMG (/emg)</span>
+                </label>
+                <label class="toggle-checkbox">
+                  <input type="checkbox" id="osc-toggle-angles" checked>
+                  <span>Ángulos (/roll, /pitch, /yaw)</span>
+                </label>
+                <label class="toggle-checkbox">
+                  <input type="checkbox" id="osc-toggle-quat" checked>
+                  <span>Cuaternión (/quaternion)</span>
+                </label>
+                <label class="toggle-checkbox">
+                  <input type="checkbox" id="osc-toggle-poses" checked>
+                  <span>Gestos (/fist, /pose, etc)</span>
+                </label>
+                <label class="toggle-checkbox">
+                  <input type="checkbox" id="osc-toggle-hits" checked>
+                  <span>Impacto (/hit)</span>
+                </label>
+                <label class="toggle-checkbox">
+                  <input type="checkbox" id="osc-toggle-imu" checked>
+                  <span>IMU (/accel, /gyro)</span>
+                </label>
+              </div>
+
+              <button id="btn-save-osc-config" class="btn btn-primary btn-block">
+                💾 Aplicar Configuración OSC
+              </button>
+            </div>
+
+            <!-- OSC Live Packet Log -->
+            <div class="osc-log-panel">
+              <div class="log-header">
+                <span>Monitoreo de Paquetes en Tiempo Real</span>
+                <span class="packet-counter" id="osc-packet-counter">0 paquetes</span>
+              </div>
+              <div class="terminal-log" id="osc-terminal-log">
+                <div class="log-line system">[Sistema] Listo para transmitir paquetes OSC a aplicaciones creativas (Ableton, TouchDesigner, Resolume, Max/MSP)...</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- TAB 2: CONTROL SONORO, SINTETIZADOR ARMÓNICO & MELODÍAS       -->
+    <!-- ============================================================= -->
+    <div class="tab-pane" id="tab-audio">
+      <div class="audio-studio-layout">
+
+        <!-- Top Synth Command Bar -->
+        <div class="card audio-header-card">
+          <div class="audio-master-controls">
+            <button id="btn-audio-toggle" class="btn btn-audio-power">
+              <span class="power-icon">🔊</span>
+              <span id="txt-audio-power">ACTIVAR MOTOR DE AUDIO</span>
+            </button>
+
+            <div class="audio-mode-selector">
+              <label>Modo Sonoro:</label>
+              <select id="sel-audio-mode" class="select-hud">
+                <option value="harmonic">Oscilador Armónico Continuo (Theremin / Dron)</option>
+                <option value="melodic">Arpegiador Melódico Cuantizado (Escalas)</option>
+                <option value="gestural">Polifonía Gestual & Acordes (Poses)</option>
+              </select>
+            </div>
+
+            <div class="scale-selector-wrap">
+              <label>Escala Musical:</label>
+              <select id="sel-audio-scale" class="select-hud">
+                <option value="pentatonic_minor">Pentatónica Menor (A, C, D, E, G)</option>
+                <option value="dorian">Dórica Mística (A, B, C, D, E, F#, G)</option>
+                <option value="hirajoshi">Japonesa Hirajoshi (A, B, C, E, F)</option>
+                <option value="phrygian">Frigia Dominante (A, Bb, C#, D, E, F, G)</option>
+                <option value="major">Mayor Espacial (C, D, E, G, A)</option>
+                <option value="chromatic">Cromática Libre</option>
+              </select>
+            </div>
+
+            <div class="octave-selector-wrap">
+              <label>Octava Base:</label>
+              <select id="sel-audio-octave" class="select-hud">
+                <option value="1">Sub (C2)</option>
+                <option value="2">Bajo (C3)</option>
+                <option value="3" selected>Medio (C4)</option>
+                <option value="4">Agudo (C5)</option>
+              </select>
+            </div>
+
+            <div class="volume-slider-wrap">
+              <label>Volumen Master:</label>
+              <input type="range" id="slider-audio-volume" min="0" max="1" step="0.05" value="0.7">
+              <span id="val-audio-volume">70%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Middle Audio Grid: Visualizers + Control Matrix -->
+        <div class="audio-grid">
+
+          <!-- Left: Lissajous & FFT Spectrum Visualizers -->
+          <div class="card card-audio-visual">
+            <div class="card-header">
+              <div class="header-left">
+                <span class="card-tag">OSCILOSCOPIO</span>
+                <h2>Fase Lissajous & Espectro FFT</h2>
+              </div>
+              <div class="note-display-badge">
+                <span class="label">NOTA / FREQ:</span>
+                <span class="note-value" id="val-audio-note">--</span>
+                <span class="freq-value" id="val-audio-freq">0.0 Hz</span>
+              </div>
+            </div>
+
+            <!-- Double Visualizer: Lissajous XY and Waveform -->
+            <div class="synth-canvases-container">
+              <div class="synth-canvas-block">
+                <span class="canvas-tag">FIGURA LISSAJOUS (Fase X/Y)</span>
+                <canvas id="canvas-lissajous" width="340" height="200"></canvas>
+              </div>
+              <div class="synth-canvas-block">
+                <span class="canvas-tag">ESPECTRO DE FRECUENCIA & FORMA DE ONDA</span>
+                <canvas id="canvas-fft-spectrum" width="340" height="200"></canvas>
+              </div>
+            </div>
+
+            <!-- Dynamic Harmonic Bar Visualizer -->
+            <div class="harmonics-rack">
+              <div class="harmonics-header">
+                <span>BANCO DE 6 ARMÓNICOS ADITIVOS (Modulado por ROLL y GIRO)</span>
+                <span class="harmonic-blend-val" id="val-harmonic-blend">Puro</span>
+              </div>
+              <div class="harmonics-bars-grid">
+                <div class="harmonic-item">
+                  <span class="h-label">1× (Fund)</span>
+                  <div class="h-meter-track"><div class="h-meter-fill" id="h-bar-1" style="height: 100%;"></div></div>
+                  <span class="h-pct" id="h-val-1">1.0</span>
+                </div>
+                <div class="harmonic-item">
+                  <span class="h-label">2× (Oct)</span>
+                  <div class="h-meter-track"><div class="h-meter-fill" id="h-bar-2" style="height: 0%;"></div></div>
+                  <span class="h-pct" id="h-val-2">0.0</span>
+                </div>
+                <div class="harmonic-item">
+                  <span class="h-label">3× (5ta)</span>
+                  <div class="h-meter-track"><div class="h-meter-fill" id="h-bar-3" style="height: 0%;"></div></div>
+                  <span class="h-pct" id="h-val-3">0.0</span>
+                </div>
+                <div class="harmonic-item">
+                  <span class="h-label">4× (2da Oct)</span>
+                  <div class="h-meter-track"><div class="h-meter-fill" id="h-bar-4" style="height: 0%;"></div></div>
+                  <span class="h-pct" id="h-val-4">0.0</span>
+                </div>
+                <div class="harmonic-item">
+                  <span class="h-label">5× (3ra M)</span>
+                  <div class="h-meter-track"><div class="h-meter-fill" id="h-bar-5" style="height: 0%;"></div></div>
+                  <span class="h-pct" id="h-val-5">0.0</span>
+                </div>
+                <div class="harmonic-item">
+                  <span class="h-label">6× (3ra Oct)</span>
+                  <div class="h-meter-track"><div class="h-meter-fill" id="h-bar-6" style="height: 0%;"></div></div>
+                  <span class="h-pct" id="h-val-6">0.0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Motion-to-Sound Mapping Matrix & Effects -->
+          <div class="card card-audio-mapping">
+            <div class="card-header">
+              <div class="header-left">
+                <span class="card-tag">CONTROL EN VIVO</span>
+                <h2>Mapeo Sonoro por Movimiento & Gestos</h2>
+              </div>
+            </div>
+
+            <!-- Dynamic Parameter Strips -->
+            <div class="mapping-strips">
+              <div class="param-strip">
+                <div class="param-info">
+                  <span class="param-source">PITCH (Inclinación ↑↓)</span>
+                  <span class="param-dest">Altura Melódica / Frecuencia</span>
+                </div>
+                <div class="param-bar-bg"><div class="param-bar-fg" id="map-bar-pitch"></div></div>
+                <span class="param-readout" id="map-val-pitch">0.00</span>
+              </div>
+
+              <div class="param-strip">
+                <div class="param-info">
+                  <span class="param-source">ROLL (Giro Muñeca ↺↻)</span>
+                  <span class="param-dest">Saturación Armónica / Timbre</span>
+                </div>
+                <div class="param-bar-bg"><div class="param-bar-fg" id="map-bar-roll"></div></div>
+                <span class="param-readout" id="map-val-roll">0.00</span>
+              </div>
+
+              <div class="param-strip">
+                <div class="param-info">
+                  <span class="param-source">GIRO / VELOCIDAD</span>
+                  <span class="param-dest">Vibrato & Resonancia Q</span>
+                </div>
+                <div class="param-bar-bg"><div class="param-bar-fg" id="map-bar-gyro"></div></div>
+                <span class="param-readout" id="map-val-gyro">0.00</span>
+              </div>
+
+              <div class="param-strip">
+                <div class="param-info">
+                  <span class="param-source">EMG (Contracción Muscular)</span>
+                  <span class="param-dest">Filtro Cutoff (200Hz - 12kHz)</span>
+                </div>
+                <div class="param-bar-bg"><div class="param-bar-fg" id="map-bar-emg"></div></div>
+                <span class="param-readout" id="map-val-emg">200 Hz</span>
+              </div>
+            </div>
+
+            <!-- Gestures & Note Trigger Reference -->
+            <div class="gestural-triggers-hud">
+              <div class="triggers-title">Disparadores por Gestos Myo:</div>
+              <div class="trigger-badges-grid">
+                <div class="trigger-badge" id="trig-fist">
+                  <span class="t-icon">✊ FIST</span>
+                  <span class="t-action">Acorde / Hold Freeze</span>
+                </div>
+                <div class="trigger-badge" id="trig-wave_in">
+                  <span class="t-icon">👈 WAVE IN</span>
+                  <span class="t-action">Arpegio Abajo ↓</span>
+                </div>
+                <div class="trigger-badge" id="trig-wave_out">
+                  <span class="t-icon">👉 WAVE OUT</span>
+                  <span class="t-action">Arpegio Arriba ↑</span>
+                </div>
+                <div class="trigger-badge" id="trig-fingers_spread">
+                  <span class="t-icon">🖐️ SPREAD</span>
+                  <span class="t-action">Shimmer Reverb Burst</span>
+                </div>
+                <div class="trigger-badge" id="trig-double_tap">
+                  <span class="t-icon">✌️ 2-TAP</span>
+                  <span class="t-action">Pulso Percusivo</span>
+                </div>
+                <div class="trigger-badge" id="trig-rest">
+                  <span class="t-icon">✋ REST</span>
+                  <span class="t-action">Caída / Pad Suave</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Effects Section: Filter & Delay & Reverb -->
+            <div class="fx-section">
+              <div class="fx-item">
+                <label>Filtro Resonante (Cutoff Base):</label>
+                <input type="range" id="slider-fx-cutoff" min="200" max="8000" step="50" value="2500">
+                <span id="val-fx-cutoff">2500 Hz</span>
+              </div>
+              <div class="fx-item">
+                <label>Delay Estéreo (Eco):</label>
+                <input type="range" id="slider-fx-delay" min="0" max="0.8" step="0.05" value="0.35">
+                <span id="val-fx-delay">35%</span>
+              </div>
+              <div class="fx-item">
+                <label>Reverberación Espacial:</label>
+                <input type="range" id="slider-fx-reverb" min="0" max="0.9" step="0.05" value="0.45">
+                <span id="val-fx-reverb">45%</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- TAB 3: SHADERS GLSL & VISUALES 3D REACTIVOS                   -->
+    <!-- ============================================================= -->
+    <div class="tab-pane" id="tab-shaders">
+      <div class="shaders-studio-container">
+
+        <!-- Shaders Toolbar -->
+        <div class="card shaders-toolbar-card">
+          <div class="toolbar-content">
+
+            <!-- Preset Selector -->
+            <div class="toolbar-item">
+              <label>Preset Visual:</label>
+              <select id="sel-shader-preset" class="select-hud">
+                <option value="particles">🌌 Campo de Partículas Cuánticas (Swarm / Vortex)</option>
+                <option value="fluid_glsl">🌊 Shader GLSL Fluido & Plasma Raymarching</option>
+                <option value="minimal_lines">📐 Cintas Geométricas & Grid Minimal 3D</option>
+                <option value="warp_orb">🔮 Esfera de Deformación Muscular (4D Noise)</option>
+              </select>
+            </div>
+
+            <!-- Color Palette Selector -->
+            <div class="toolbar-item">
+              <label>Paleta de Color:</label>
+              <select id="sel-shader-palette" class="select-hud">
+                <option value="cyberpunk">Cyberpunk Neon (Cyan & Magenta)</option>
+                <option value="aurora">Aurora Boreal (Verde & Esmeralda)</option>
+                <option value="solar">Fuego Solar (Oro & Ámbar)</option>
+                <option value="minimal">Monocromo Minimal (Blanco & Carbón)</option>
+                <option value="void">Deep Void (Violeta Ultravioleta)</option>
+              </select>
+            </div>
+
+            <!-- Sensitivity Sliders -->
+            <div class="toolbar-item">
+              <label>Sensibilidad Giro:</label>
+              <input type="range" id="slider-shader-motion" min="0.5" max="3" step="0.1" value="1.5">
+              <span id="val-shader-motion">1.5x</span>
+            </div>
+
+            <div class="toolbar-item">
+              <label>Impacto EMG:</label>
+              <input type="range" id="slider-shader-emg" min="0.5" max="4" step="0.2" value="2.0">
+              <span id="val-shader-emg">2.0x</span>
+            </div>
+
+            <!-- Fullscreen Action -->
+            <div class="toolbar-actions ml-auto">
+              <button id="btn-shader-hud-toggle" class="btn btn-secondary btn-sm">👁️ Ocultar HUD</button>
+              <button id="btn-shader-fullscreen" class="btn btn-primary btn-sm">🖥️ Pantalla Completa (VJ)</button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- WebGL Visuals Viewport -->
+        <div class="shaders-viewport-wrapper" id="shaders-viewport-wrapper">
+          <div id="canvas-shaders-container"></div>
+
+          <!-- Floating Reactivity HUD Overlay -->
+          <div class="shader-hud-overlay" id="shader-hud-overlay">
+            <div class="hud-stat">
+              <span class="hud-label">PRESET:</span>
+              <span class="hud-val" id="hud-preset-name">Partículas Cuánticas</span>
+            </div>
+            <div class="hud-stat">
+              <span class="hud-label">TURBULENCIA GIRO:</span>
+              <span class="hud-val" id="hud-gyro-speed">0.0 °/s</span>
+            </div>
+            <div class="hud-stat">
+              <span class="hud-label">FUERZA EMG:</span>
+              <span class="hud-val" id="hud-emg-force">0.0%</span>
+            </div>
+            <div class="hud-stat">
+              <span class="hud-label">FPS:</span>
+              <span class="hud-val" id="hud-fps">60</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Footer Information -->
+    <footer class="bottom-bar">
+      <span>MYO Armband Performance Suite · Compatible con Myo Connect & WebSocket API</span>
+      <span class="credits">Desarrollado para Helix Perfo</span>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
