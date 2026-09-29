@@ -1,0 +1,10 @@
+# Dependencias para Puentes Myo sin Myo Connect
+# 1. Modo Dongle Oficial BLED112 (pyomyo)
+pyserial>=3.5
+
+# 2. Modo Bluetooth Integrado PC sin Dongle (Bleak)
+bleak>=0.21.0
+
+# Opcionales para OSC avanzado y WebSockets si se requieren
+python-osc>=1.8.0
+websockets>=12.0

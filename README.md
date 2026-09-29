@@ -59,8 +59,19 @@ Suite integral de software interactivo para la pulsera **Thalmic Labs Myo Armban
 ## 📦 Estructura del Repositorio
 
 ```text
+├── bridges/
+│   ├── pyomyo/                       <- Módulo pyomyo ligero (driver BLED112 sin bloat)
+│   ├── bridge_pyomyo_dongle.py       <- Puente Dongle Oficial (100% Sin Myo Connect)
+│   ├── bridge_bleak_bluetooth.py     <- Puente Bluetooth PC (Sin Dongle y Sin Myo Connect)
+│   ├── requirements.txt              <- Dependencias Python (pyserial, bleak)
+│   ├── INSTALAR_DEPENDENCIAS_PYTHON.bat
+│   ├── INICIAR_DONGLE_PYOMYO.bat
+│   ├── INICIAR_BLUETOOTH_BLEAK.bat
+│   └── README_BRIDGES.md             <- Guía técnica de los puentes libres
 ├── drivers/
-│   ├── Myo+Connect+Installer.exe     <- Instalador oficial de Myo Connect (v1.0.4)
+│   ├── INSTALAR_MYO_CONNECT.bat      <- Ensambla y ejecuta el instalador oficial
+│   ├── Myo_Connect_Installer.part1   <- Fragmento 1 (52 MB)
+│   ├── Myo_Connect_Installer.part2   <- Fragmento 2 (52 MB)
 │   └── myo-sdk-win-0.9.0/           <- Thalmic Labs Myo SDK para Windows (C/C++ & docs)
 ├── Myo/
 │   ├── public/
@@ -78,6 +89,21 @@ Suite integral de software interactivo para la pulsera **Thalmic Labs Myo Armban
 ├── package.json                      <- Configuración y scripts npm en la raíz
 └── README.md                         <- Documentación principal del proyecto
 ```
+
+---
+
+## 🔌 Alternativas 100% Libres (Sin Myo Connect)
+
+Si no deseas utilizar el software oficial *Myo Connect* o si en el futuro pierdes el Dongle USB, el directorio [`bridges/`](bridges/) incluye dos alternativas completas:
+
+1. **Modo Dongle Oficial BLED112 (`pyomyo`)**:
+   * Controla el dongle USB oficial directamente a través del puerto serie COM (`COM3`) con el protocolo binario BGAPI.
+   * Ejecuta: 👉 **[`bridges/INICIAR_DONGLE_PYOMYO.bat`](bridges/INICIAR_DONGLE_PYOMYO.bat)**.
+2. **Modo Bluetooth Integrado PC (`Bleak`)**:
+   * Se conecta a la pulsera mediante el Bluetooth 4.0+ propio de tu computadora, **sin necesidad del dongle USB**.
+   * Ejecuta: 👉 **[`bridges/INICIAR_BLUETOOTH_BLEAK.bat`](bridges/INICIAR_BLUETOOTH_BLEAK.bat)**.
+
+Consulta la guía técnica en [**`bridges/README_BRIDGES.md`**](bridges/README_BRIDGES.md) para más detalles.
 
 ---
 
