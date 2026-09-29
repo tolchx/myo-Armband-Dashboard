@@ -2,18 +2,34 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-v18%2B-green.svg)](https://nodejs.org/)
+[![Python](https://img.shields.io/badge/Python-3.8%2B-yellow.svg)](https://www.python.org/)
 [![WebGL](https://img.shields.io/badge/Three.js-WebGL-cyan.svg)](https://threejs.org/)
 [![Web Audio API](https://img.shields.io/badge/Web%20Audio-Synthesizer-purple.svg)](https://developer.mozilla.org/es/docs/Web/API/Web_Audio_API)
 [![OSC](https://img.shields.io/badge/OSC-UDP%20Bridge-orange.svg)](http://opensoundcontrol.org/)
+[![Bluetooth](https://img.shields.io/badge/BLE-GATT%20Direct-blue.svg)](https://github.com/hbldh/bleak)
 
-Suite integral de software interactivo para la pulsera **Thalmic Labs Myo Armband**. Permite capturar, visualizar y traducir en tiempo real la actividad electromiográfica (EMG de 8 canales), la orientación espacial (IMU cuaterniones/ángulos de Euler) y el reconocimiento de gestos hacia:
-1. **Telemetría & Puente OSC**: Enrutador OSC UDP bidireccional para DAWs y software de visuales (Ableton Live, TouchDesigner, Resolume, Max/MSP, Pure Data, Unreal Engine).
-2. **Control Sonoro & Armónicos**: Sintetizador aditivo polifónico en Web Audio API, osciloscopio Lissajous XY, analizador FFT y arpegiador melódico cuantizado por gestos y giroscopio.
-3. **Shaders GLSL & Visuales 3D**: Motor de visuales reactivos WebGL con 25.000 partículas cuánticas, shaders GLSL de fluidos orgánicos y modo Pantalla Completa para shows en vivo (VJ).
+Suite interactiva integral para la pulsera **Thalmic Labs Myo Armband**. Permite capturar, visualizar y traducir en tiempo real la actividad electromiográfica (EMG de 8 canales a 200 Hz), orientación espacial (IMU cuaterniones/ángulos Euler) y reconocimiento de gestos mediante IA para música, artes electrónicas y performances en vivo.
+
+Funciona tanto con el software oficial **Myo Connect** como de forma **100% independiente** (mediante drivers libres para el Dongle USB oficial o con el Bluetooth integrado de tu PC sin ningún dongle).
 
 ---
 
-## 📸 Módulos Principales de la WebApp
+## ⚡ Modos de Conexión Disponibles
+
+El proyecto ofrece **3 métodos de operación** según tus necesidades de hardware:
+
+| Característica | 1. Myo Connect Oficial | 2. Dongle BLED112 (`pyomyo`) | 3. Bluetooth PC (`Bleak`) |
+| :--- | :---: | :---: | :---: |
+| **Requiere Myo Connect** | ✅ Sí | ❌ **No (100% Libre)** | ❌ **No (100% Libre)** |
+| **Requiere Dongle USB** | ✅ Sí (Oficial) | ✅ Sí (Oficial BLED112) | ❌ **No (Usa Bluetooth PC)** |
+| **Frecuencia EMG** | 50 Hz / 200 Hz | **200 Hz Puro (Sin filtro)** | **200 Hz Puro** |
+| **Salida OSC UDP (22345)** | ✅ Sí | ✅ Sí | ✅ Sí |
+| **Compatible con WebApp** | ✅ Sí | ✅ Sí | ✅ Sí |
+| **Lanzador en 1 Clic** | `INICIAR_MYO_WEBAPP.bat` | `INICIAR_DONGLE_PYOMYO.bat` | `INICIAR_BLUETOOTH_BLEAK.bat` |
+
+---
+
+## 📸 Módulos Principales de la WebApp (`http://localhost:3000`)
 
 ### 1. 📊 Telemetría & Puente OSC
 * **Modelo 3D de la Pulsera (Three.js)**: Orientación continua mediante cuaterniones sin bloqueo cardánico (*gimbal lock*). Los 8 sensores 3D se iluminan según la contracción muscular de cada canal.
@@ -59,20 +75,20 @@ Suite integral de software interactivo para la pulsera **Thalmic Labs Myo Armban
 ## 📦 Estructura del Repositorio
 
 ```text
-├── bridges/
-│   ├── pyomyo/                       <- Módulo pyomyo ligero (driver BLED112 sin bloat)
-│   ├── bridge_pyomyo_dongle.py       <- Puente Dongle Oficial (100% Sin Myo Connect)
-│   ├── bridge_bleak_bluetooth.py     <- Puente Bluetooth PC (Sin Dongle y Sin Myo Connect)
+├── bridges/                          <- Puentes libres (100% Sin Myo Connect)
+│   ├── pyomyo/                       <- Módulo driver pyomyo integrado (ligero, sin bloat)
+│   ├── bridge_pyomyo_dongle.py       <- Puente Dongle Oficial COM3 (pyomyo) -> OSC & WS
+│   ├── bridge_bleak_bluetooth.py     <- Puente Bluetooth PC Nativo (Bleak) -> OSC & WS
 │   ├── requirements.txt              <- Dependencias Python (pyserial, bleak)
-│   ├── INSTALAR_DEPENDENCIAS_PYTHON.bat
-│   ├── INICIAR_DONGLE_PYOMYO.bat
-│   ├── INICIAR_BLUETOOTH_BLEAK.bat
-│   └── README_BRIDGES.md             <- Guía técnica de los puentes libres
-├── drivers/
+│   ├── INSTALAR_DEPENDENCIAS_PYTHON.bat <- Instalador de dependencias pip
+│   ├── INICIAR_DONGLE_PYOMYO.bat     <- Lanzador rápido Modo Dongle
+│   ├── INICIAR_BLUETOOTH_BLEAK.bat   <- Lanzador rápido Modo Bluetooth PC
+│   └── README_BRIDGES.md             <- Guía técnica detallada de puentes
+├── drivers/                          <- Drivers y SDK oficial de Thalmic Labs
 │   ├── INSTALAR_MYO_CONNECT.bat      <- Ensambla y ejecuta el instalador oficial
-│   ├── Myo_Connect_Installer.part1   <- Fragmento 1 (52 MB)
-│   ├── Myo_Connect_Installer.part2   <- Fragmento 2 (52 MB)
-│   └── myo-sdk-win-0.9.0/           <- Thalmic Labs Myo SDK para Windows (C/C++ & docs)
+│   ├── Myo_Connect_Installer.part1   <- Fragmento binario 1 (52 MB)
+│   ├── Myo_Connect_Installer.part2   <- Fragmento binario 2 (52 MB)
+│   └── myo-sdk-win-0.9.0/           <- Myo SDK para Windows (C/C++ & docs)
 ├── Myo/
 │   ├── public/
 │   │   ├── index.html                <- Dashboard Web interactivo y modular
@@ -84,7 +100,7 @@ Suite integral de software interactivo para la pulsera **Thalmic Labs Myo Armban
 │   ├── server.js                     <- Servidor backend HTTP, WebSocket y sockets OSC UDP
 │   ├── app.js                        <- Script de compatibilidad MyoOSC CLI
 │   └── package.json                  <- Dependencias del backend
-├── INICIAR_MYO_WEBAPP.bat            <- Lanzador automático para Windows (Doble clic)
+├── INICIAR_MYO_WEBAPP.bat            <- Lanzador de la WebApp para Windows (Doble clic)
 ├── INSTRUCCIONES_MYO_WEBAPP.md       <- Guía rápida de uso en español
 ├── package.json                      <- Configuración y scripts npm en la raíz
 └── README.md                         <- Documentación principal del proyecto
@@ -92,64 +108,42 @@ Suite integral de software interactivo para la pulsera **Thalmic Labs Myo Armban
 
 ---
 
-## 🔌 Alternativas 100% Libres (Sin Myo Connect)
+## 🚀 Guía de Inicio Rápido
 
-Si no deseas utilizar el software oficial *Myo Connect* o si en el futuro pierdes el Dongle USB, el directorio [`bridges/`](bridges/) incluye dos alternativas completas:
-
-1. **Modo Dongle Oficial BLED112 (`pyomyo`)**:
-   * Controla el dongle USB oficial directamente a través del puerto serie COM (`COM3`) con el protocolo binario BGAPI.
-   * Ejecuta: 👉 **[`bridges/INICIAR_DONGLE_PYOMYO.bat`](bridges/INICIAR_DONGLE_PYOMYO.bat)**.
-2. **Modo Bluetooth Integrado PC (`Bleak`)**:
-   * Se conecta a la pulsera mediante el Bluetooth 4.0+ propio de tu computadora, **sin necesidad del dongle USB**.
-   * Ejecuta: 👉 **[`bridges/INICIAR_BLUETOOTH_BLEAK.bat`](bridges/INICIAR_BLUETOOTH_BLEAK.bat)**.
-
-Consulta la guía técnica en [**`bridges/README_BRIDGES.md`**](bridges/README_BRIDGES.md) para más detalles.
+### Método A: Servidor WebApp Completo (Con Myo Connect)
+1. **Instala Myo Connect**: Ejecuta [`drivers/INSTALAR_MYO_CONNECT.bat`](drivers/INSTALAR_MYO_CONNECT.bat).
+2. Conecta el Dongle USB y sincroniza la pulsera (llevar la mano al pecho).
+3. Haz doble clic en:
+   👉 **[`INICIAR_MYO_WEBAPP.bat`](INICIAR_MYO_WEBAPP.bat)**
+4. Se abrirá automáticamente tu navegador en **`http://localhost:3000`**.
 
 ---
 
-## ⚙️ Instalación y Requisitos
-
-### Requisitos de Hardware
-* **Pulsera Thalmic Myo Armband**.
-* **Dongle USB Bluetooth original de Myo**.
-* Sistema operativo **Windows 10 / 11** (o macOS / Linux compatible con Myo Connect).
-
-### Paso 1: Instalar el Driver Myo Connect
-Para que la pulsera se comunique con la computadora, es indispensable tener en ejecución **Myo Connect**:
-* Ejecuta el instalador incluido en este repositorio:
-  📂 `drivers/Myo+Connect+Installer.exe`
-* *(Enlace de respaldo externo: [Myo Connect Installer v1.0.4 en GitHub Releases](https://github.com/NiklasRosenstein/myo-python/releases/download/v1.0.4/Myo+Connect+Installer.exe))*.
-* Conecta el dongle USB oficial, abre **Myo Connect**, colócate la pulsera en el antebrazo y realiza el gesto de sincronización (llevar la mano al pecho).
-
-### Paso 2: Instalar Dependencias de Node.js
-Requiere [Node.js](https://nodejs.org/) (versión 18 o superior):
-```bash
-git clone https://github.com/tolchx/myo-Armband-Dashboard.git
-cd myo-Armband-Dashboard
-npm install
-```
+### Método B: Con el Dongle Oficial USB pero SIN Myo Connect (`pyomyo`)
+El dongle USB original que viene con la pulsera es un chip comercial estándar **Silicon Labs / Bluegiga BLED112** (`COM3`).
+1. Instala las dependencias de Python ejecutando:
+   👉 **[`bridges/INSTALAR_DEPENDENCIAS_PYTHON.bat`](bridges/INSTALAR_DEPENDENCIAS_PYTHON.bat)**
+2. Asegúrate de que **Myo Connect esté cerrado**.
+3. Haz doble clic en:
+   👉 **[`bridges/INICIAR_DONGLE_PYOMYO.bat`](bridges/INICIAR_DONGLE_PYOMYO.bat)**
+4. El script tomará control directo del puerto serie del dongle y comenzará a transmitir EMG crudo (200 Hz) y telemetría por OSC UDP hacia `127.0.0.1:22345`.
 
 ---
 
-## 🚀 Cómo Iniciar la WebApp
-
-### Opción A (Recomendada en Windows):
-Haz doble clic en el archivo:
-👉 **`INICIAR_MYO_WEBAPP.bat`**
-
-El script verificará que Myo Connect esté corriendo, levantará el servidor Node.js y abrirá automáticamente tu navegador en **`http://localhost:3000`**.
-
-### Opción B (Línea de Comandos):
-```bash
-npm start
-```
-Luego visita `http://localhost:3000` en tu navegador.
+### Método C: Con el Bluetooth Integrado de la PC (SIN Dongle y SIN Myo Connect)
+Si en el futuro extravías el Dongle USB o deseas usar tu laptop sin conectar ningún adaptador:
+1. Instala las dependencias ejecutando [`bridges/INSTALAR_DEPENDENCIAS_PYTHON.bat`](bridges/INSTALAR_DEPENDENCIAS_PYTHON.bat).
+2. **Desconecta el Dongle USB de la PC** (para que la pulsera no intente enlazarlo).
+3. Enciende el Bluetooth de tu PC.
+4. Mueve la pulsera Myo para activarla y haz doble clic en:
+   👉 **[`bridges/INICIAR_BLUETOOTH_BLEAK.bat`](bridges/INICIAR_BLUETOOTH_BLEAK.bat)**
+5. La librería `Bleak` se conectará a la pulsera mediante las características GATT de Windows WinRT y retransmitirá los datos por OSC a `127.0.0.1:22345`.
 
 ---
 
 ## 📡 Tabla de Direcciones y Protocolos OSC (UDP)
 
-Por defecto, la suite transmite paquetes OSC hacia `127.0.0.1:22345` y escucha comandos en el puerto `22346`.
+Todos los modos transmiten paquetes OSC UDP hacia **`127.0.0.1:22345`** y escuchan comandos en el puerto **`22346`** compatible con Ableton Live, TouchDesigner, Resolume, Max/MSP, Pure Data, etc.
 
 | Dirección OSC | Tipo de Argumento | Descripción |
 | :--- | :--- | :--- |
@@ -183,6 +177,6 @@ Puedes enviar paquetes OSC desde software externo para controlar la pulsera:
 
 ## 📄 Licencia
 
-Este proyecto se distribuye bajo la licencia **MIT**. Consulta el archivo `LICENSE` para más detalles.
+Este proyecto se distribuye bajo la licencia **MIT**. Consulta el archivo [`LICENSE`](LICENSE) para más detalles.
 
 Desarrollado para performances audiovisuales e interacción gestual en vivo con el Myo Armband.
