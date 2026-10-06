@@ -300,6 +300,9 @@ function handleClientMessage(msg, ws) {
 // Myo Connect Integration (Node backend)
 // ----------------------------------------------------
 var Myo = require('myo');
+Myo.onError = function(err) {
+  console.warn('[Myo Connect] Notice: Myo Connect is not running or socket error. Server running; retry scheduled.');
+};
 let activeMyo = null;
 
 function triggerVibrate(intensity) {
@@ -343,7 +346,11 @@ function toggleEmgStream(enabled) {
 }
 
 function setupMyoListeners() {
-  Myo.connect('com.helix.myo');
+  try {
+    Myo.connect('com.helix.myo');
+  } catch (e) {
+    console.warn('[Myo Connect] Connect error:', e.message || e);
+  }
 
   Myo.on('ready', () => {
     console.log('[Myo Connect] WebSocket connected to Myo Connect (ws://127.0.0.1:10138)');
@@ -359,7 +366,7 @@ function setupMyoListeners() {
     // Reconnect attempt
     setTimeout(() => {
       try { Myo.connect('com.helix.myo'); } catch(e) {}
-    }, 3000);
+    }, 5000);
   });
 
   Myo.on('connected', function() {
